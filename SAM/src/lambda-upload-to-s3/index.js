@@ -22,7 +22,7 @@ exports.handler = async (event) => {
           Key: S3_KEY,
           Body: fileContent,
           ContentType: contentType,
-          ACL: "public-read",
+          //ACL: "public-read",
         })
         .promise();
       const body = {

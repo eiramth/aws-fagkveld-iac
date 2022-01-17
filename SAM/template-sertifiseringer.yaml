@@ -8,11 +8,13 @@ Resources:
   LambdaUploadToS3:
     Type: AWS::Serverless::Function # SAM specific resource type
     Properties:
-      Handler: lambda-upload-to-s3.lambda_handler
+      #Handler: lambda-upload-to-s3.lambda_handler
+      Handler: index.handler
       Runtime: nodejs14.x
-      CodeUri: src/
+      CodeUri: src/lambda-upload-to-s3/index.js
       MemorySize: 128
       Timeout: 3
+      Role: !GetAtt MyLambdaS3Role.Arn 
       Events:
         UploadEvent:
           Type: HttpApi
@@ -21,16 +23,21 @@ Resources:
             Method: PUT
             ApiId:
               Ref: MyHttpApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: eira-sertifiseringer-table-sam #!Ref MyDynamoDBTable
 
 
   LambdaToDynamoDB:
     Type: AWS::Serverless::Function # SAM specific resource type
     Properties:
-      Handler: lambda-to-dynamodb.lambda_handler
+      #Handler: lambda-to-dynamodb.lambda_handler
+      Handler: index.handler
       Runtime: nodejs14.x
-      CodeUri: src/
+      CodeUri: src/lambda-to-dynamodb/index.js
       MemorySize: 128
       Timeout: 3
+      Role: !GetAtt MyLambdaDynamoDBRole.Arn
       Events:
         GetEvent:
           Type: HttpApi
@@ -91,7 +98,7 @@ Resources:
       WebsiteConfiguration: 
         IndexDocument: index.html
 
-    # Bucket policy to allow actions on our S3 bucket
+  # Bucket policy to allow actions on our S3 bucket
   BucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -124,3 +131,60 @@ Resources:
         Name: id
         Type: String
       TableName: eira-sertifiseringer-table-sam
+
+
+
+
+
+
+
+  # IAM role to be used by Lambda to allow upload to S3
+  MyLambdaS3Role:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: EmbeddedInlinePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - s3:*
+                  - s3-object-lambda:*
+                Resource: '*'
+
+  # IAM role to be used by Lambda to access DynamoDB
+  MyLambdaDynamoDBRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: EmbeddedInlinePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:DeleteItem
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:Scan
+                  - dynamodb:UpdateItem
+                Resource: '*' 

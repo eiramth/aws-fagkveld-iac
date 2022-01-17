@@ -5,11 +5,15 @@ Resources:
   LambdaUploadToS3:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: lambda-upload-to-s3.lambda_handler
+      Handler: index.handler
       Runtime: nodejs14.x
-      CodeUri: s3://eira-code-sam-test/ec0e926e36f228e2ae0b0a8fb2ffa5cf
+      CodeUri: s3://eira-code-sam-test/6f68be438561a410837e2e959d763e6c
       MemorySize: 128
       Timeout: 3
+      Role:
+        Fn::GetAtt:
+        - MyLambdaS3Role
+        - Arn
       Events:
         UploadEvent:
           Type: HttpApi
@@ -18,14 +22,21 @@ Resources:
             Method: PUT
             ApiId:
               Ref: MyHttpApi
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: eira-sertifiseringer-table-sam
   LambdaToDynamoDB:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: lambda-to-dynamodb.lambda_handler
+      Handler: index.handler
       Runtime: nodejs14.x
-      CodeUri: s3://eira-code-sam-test/ec0e926e36f228e2ae0b0a8fb2ffa5cf
+      CodeUri: s3://eira-code-sam-test/d9eb2bc7cf7c7205a14fd185695da4b5
       MemorySize: 128
       Timeout: 3
+      Role:
+        Fn::GetAtt:
+        - MyLambdaDynamoDBRole
+        - Arn
       Events:
         GetEvent:
           Type: HttpApi
@@ -108,3 +119,50 @@ Resources:
         Name: id
         Type: String
       TableName: eira-sertifiseringer-table-sam
+  MyLambdaS3Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Policies:
+      - PolicyName: EmbeddedInlinePolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:*
+            - s3-object-lambda:*
+            Resource: '*'
+  MyLambdaDynamoDBRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Policies:
+      - PolicyName: EmbeddedInlinePolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:DeleteItem
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:Scan
+            - dynamodb:UpdateItem
+            Resource: '*'
